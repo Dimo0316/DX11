@@ -1,6 +1,5 @@
 #pragma once
 #include <d3d11.h>
-#include "textureclass.h"
 #include "common.h"
 
 class PlaneModelClass
@@ -18,22 +17,18 @@ public:
 	PlaneModelClass(void);
 	PlaneModelClass(const PlaneModelClass&);
 	~PlaneModelClass(void);
-	bool Initialize(ID3D11Device*, int, int, float, WCHAR*);
+	bool Initialize(ID3D11Device*, int, int, float);
 	void Shutdown();
 	void Render(ID3D11DeviceContext*);
 
 	int GetIndexCount();
-	ID3D11ShaderResourceView* GetTexture();
 private:
 	bool InitializeBuffers(ID3D11Device*, int, int, float);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
-	bool LoadTexture(ID3D11Device*, WCHAR*);
 	void ReleaseTexture();
 	//¶¥µã»º³åºÍ¶¥µãË÷Òý»º³å
 	ID3D11Buffer *m_vertexBuffer, *m_indexBuffer;
 	int m_vertexCount, m_indexCount;
-
-	TextureClass* m_Texture;
 };
 

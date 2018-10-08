@@ -1,9 +1,9 @@
 #pragma once
 #include <d3d11.h>
-#include "textureclass.h"
 #include "common.h"
-
-class PlaneModelClass
+#include <fstream>
+using namespace std;
+class CubeModelClass
 {
 private:
 	struct VertexType
@@ -14,26 +14,31 @@ private:
 		XMFLOAT4 Kd;  //材质漫反射系数
 		XMFLOAT4 Ks;  //材质的高光系数
 	};
+	struct ModelType
+	{
+		float x, y, z;
+		float tu, tv;
+		float nx, ny, nz;
+	};
 public:
-	PlaneModelClass(void);
-	PlaneModelClass(const PlaneModelClass&);
-	~PlaneModelClass(void);
-	bool Initialize(ID3D11Device*, int, int, float, WCHAR*);
+	CubeModelClass(void);
+	CubeModelClass(const CubeModelClass &);
+	~CubeModelClass(void);
+	bool Initialize(ID3D11Device*, char*);
 	void Shutdown();
 	void Render(ID3D11DeviceContext*);
 
 	int GetIndexCount();
-	ID3D11ShaderResourceView* GetTexture();
 private:
-	bool InitializeBuffers(ID3D11Device*, int, int, float);
+	bool InitializeBuffers(ID3D11Device*);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
-	bool LoadTexture(ID3D11Device*, WCHAR*);
-	void ReleaseTexture();
+
+	bool LoadModel(char*);
+	void ReleaseModel();
 	//顶点缓冲和顶点索引缓冲
 	ID3D11Buffer *m_vertexBuffer, *m_indexBuffer;
 	int m_vertexCount, m_indexCount;
 
-	TextureClass* m_Texture;
+	ModelType* m_model;
 };
-

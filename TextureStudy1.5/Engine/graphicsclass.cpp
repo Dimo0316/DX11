@@ -18,6 +18,7 @@ GraphicsClass::GraphicsClass()
 	//m_Light = 0;
 	m_LightShader = 0;
 	m_LightTexShader = 0;
+	m_TexManager = 0;
 }
 
 
@@ -92,7 +93,7 @@ bool GraphicsClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 	if (!m_PlaneModel) {
 		return false;
 	}
-	result = m_PlaneModel->Initialize(m_Direct3D->GetDevice(),300,300,1.0, (WCHAR*)L"../Engine/grass.dds");
+	result = m_PlaneModel->Initialize(m_Direct3D->GetDevice(),300,300,1.0);
 	if (!result) {
 		MessageBox(hwnd, L"Could not initialize the plane model object.", L"Error", MB_OK);
 		return false;
@@ -104,7 +105,7 @@ bool GraphicsClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		return false;
 	}
 	// 初始化坐标cube模型对象.
-	result = m_CubeModel->Initialize(m_Direct3D->GetDevice(), (char*)"../Engine/cube.txt",(WCHAR*)L"../Engine/checkboard.dds");
+	result = m_CubeModel->Initialize(m_Direct3D->GetDevice(), (char*)"../Engine/cube.txt");
 	if (!result)
 	{
 		MessageBox(hwnd, L"Could not initialize the cube model object.", L"Error", MB_OK);
@@ -152,12 +153,24 @@ bool GraphicsClass::Initialize(int screenWidth, int screenHeight, HWND hwnd)
 		MessageBox(hwnd, L"Could not initialize the light texture shader object.", L"Error", MB_OK);
 		return false;
 	}
+	m_TexManager = new TexManagerClass;
+	if (!m_TexManager)
+	{
+		return false;
+	}
 	return true;
 }
 
 
 void GraphicsClass::Shutdown()
 {
+	// 释放纹理管理对象.
+	if (m_TexManager)
+	{
+		m_TexManager->Shutdown();
+		delete m_TexManager;
+		m_TexManager = 0;
+	}
 	// 释放光照纹理shader对象.
 	if (m_LightTexShader)
 	{
@@ -250,10 +263,12 @@ bool GraphicsClass::Frame(float dt)
 
 bool GraphicsClass::Render(float dt)
 {
-	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, worldMatrix1;
+	XMMATRIX worldMatrix, viewMatrix, projectionMatrix, worldMatrix1, worldMatrix2, worldMatrix3;
 	bool result;
 
 	worldMatrix1 = XMMatrixIdentity();
+	worldMatrix2 = XMMatrixIdentity();
+	worldMatrix3 = XMMatrixIdentity();
 	m_Direct3D->BeginScene(0.0f, 0.0f, 0.5f, 1.0f);
 
 	// Get the world, view, and projection matrices from the camera and d3d objects.
@@ -335,22 +350,43 @@ bool GraphicsClass::Render(float dt)
 	m_CubeModel->Render(m_Direct3D->GetDeviceContext());
 	//用light shader渲染
 	result = m_LightTexShader->Render(m_Direct3D->GetDeviceContext(), m_CubeModel->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
-		light, material, camera, m_CubeModel->GetTexture());
+		light, material, camera, m_TexManager->createTex(m_Direct3D->GetDevice(), (wchar_t*)L"../Engine/checkboard.dds"));
 	if (!result)
 	{
 		return false;
 	}
-
+	
 	//把plane顶点和索引数据放入缓冲区，准备渲染
 	m_PlaneModel->Render(m_Direct3D->GetDeviceContext());
 	//用light shader渲染
 	result = m_LightTexShader->Render(m_Direct3D->GetDeviceContext(), m_PlaneModel->GetIndexCount(), worldMatrix1, viewMatrix, projectionMatrix,
-		light, material, camera, m_PlaneModel->GetTexture());
+		light, material, camera, m_TexManager->createTex(m_Direct3D->GetDevice(), (wchar_t*)L"../Engine/grass.dds"));
 	if (!result)
 	{
 		return false;
 	}
 
+	//执行平移操作，得到最终的模型世界矩阵,渲染后面墙体
+	worldMatrix1 = XMMatrixRotationX(-1.57);
+	worldMatrix2 = XMMatrixTranslation(0.0, 0.0, 8.0);
+	worldMatrix3 = XMMatrixMultiply(worldMatrix1, worldMatrix2);
+	result = m_LightTexShader->Render(m_Direct3D->GetDeviceContext(), m_PlaneModel->GetIndexCount(), worldMatrix3, viewMatrix, projectionMatrix,
+		light, material, camera, m_TexManager->createTex(m_Direct3D->GetDevice(), (wchar_t*)L"../Engine/stone01.dds"));
+	if (!result)
+	{
+		return false;
+	}
+
+	//执行平移操作，得到最终的模型世界矩阵,渲染左边墙体
+	worldMatrix1 = XMMatrixRotationZ(-1.57);
+	worldMatrix2 = XMMatrixTranslation(-4.0, 0.0, 0.0);
+	worldMatrix3 = XMMatrixMultiply(worldMatrix1, worldMatrix2);
+	result = m_LightTexShader->Render(m_Direct3D->GetDeviceContext(), m_PlaneModel->GetIndexCount(), worldMatrix3, viewMatrix, projectionMatrix,
+		light, material, camera, m_TexManager->createTex(m_Direct3D->GetDevice(), (wchar_t*)L"../Engine/stone01.dds"));
+	if (!result)
+	{
+		return false;
+	}
 	//把framebuffer中的图像present到屏幕上.
 	m_Direct3D->EndScene();
 

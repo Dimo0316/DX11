@@ -3,9 +3,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #define NUM_LIGHTS 2
 
-Texture2D shaderTexture;
-SamplerState SampleType;
-
 //const buffer最好为4 float的倍数，否则创建const buffer会fail
 //因为摄像机位置是世界坐标系位置，所以直接以ps const buffer形式传入
 cbuffer LightBuffer
@@ -29,8 +26,6 @@ cbuffer CameraBuffer
 {
    float4 cameraPosition; //摄像机的位置
 };
-
-
 //////////////
 // TYPEDEFS //
 //////////////
@@ -39,8 +34,7 @@ struct PixelInputType
     float4 position : SV_POSITION;
 	float4 worldposition: POSITION;
 	float3 worldnormal: NORMAL;
-	float2 tex : TEXCOORD0;
-	float4 Kd : DIFFUSE;
+	float4 Kd: DIFFUSE;
 	float4 Ks: SPECULAR;
 
 };
@@ -66,11 +60,8 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
   float3 P = input.worldposition.xyz;
  
   float3 N = normalize(input.worldnormal);
-  float4 textureColor = shaderTexture.Sample(SampleType, input.tex);
-
 
   float4 Kd = input.Kd;
-  //float4 Kd = textureColor;
   float4 Ks = input.Ks;
 
   float4 finalcolor = 0;
@@ -120,11 +111,6 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
 	  finalcolor +=  emissive + ambient + diffuse + specular;
 	 // finalcolor = specular ;
 	 }
-	 finalcolor = saturate(finalcolor);
-	 finalcolor = finalcolor * textureColor;
-	 //gamma校正
-	 //finalcolor = pow(finalcolor, 2.2);
-
   return finalcolor;
 	
 }

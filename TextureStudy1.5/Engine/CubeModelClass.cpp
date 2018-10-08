@@ -1,52 +1,54 @@
-#include "PlaneModelClass.h"
+#include "CubeModelClass.h"
 
 
-PlaneModelClass::PlaneModelClass(void)
+CubeModelClass::CubeModelClass(void)
 {
 	m_vertexBuffer = 0;
 	m_indexBuffer = 0;
-	m_Texture = 0;
+
+	m_model = 0;
 }
 
-PlaneModelClass::PlaneModelClass(const PlaneModelClass& others)
-{
-
-}
-
-PlaneModelClass::~PlaneModelClass(void)
+CubeModelClass::CubeModelClass(const CubeModelClass & others)
 {
 }
+CubeModelClass::~CubeModelClass(void)
+{
+}
 
-bool PlaneModelClass::Initialize(ID3D11Device* device, int m, int n, float dx, WCHAR* textureFilename)
+bool CubeModelClass::Initialize(ID3D11Device* device, char* modelFilename)
 {
 	bool result;
 
+	// 装入模型数据,
+	result = LoadModel(modelFilename);
+	if (!result)
+	{
+		return false;
+	}
 
 	// 初始化顶点缓冲和顶点索引缓冲.
-	result = InitializeBuffers(device, m, n, dx);
+	result = InitializeBuffers(device);
 	if (!result)
 	{
 		return false;
 	}
-	result = LoadTexture(device, textureFilename);
-	if (!result)
-	{
-		return false;
-	}
+
 	return true;
 }
 
-void PlaneModelClass::Shutdown()
+void CubeModelClass::Shutdown()
 {
-	// 释放纹理
-	ReleaseTexture();
+	
 	// 释放顶点和索引缓冲.
 	ShutdownBuffers();
+	// Release the model data.
+	ReleaseModel();
 
 	return;
 }
 
-void PlaneModelClass::Render(ID3D11DeviceContext* deviceContext)
+void CubeModelClass::Render(ID3D11DeviceContext* deviceContext)
 {
 	// 把顶点和索引缓冲放入图形管线，准备渲染.
 	RenderBuffers(deviceContext);
@@ -54,24 +56,23 @@ void PlaneModelClass::Render(ID3D11DeviceContext* deviceContext)
 	return;
 }
 
-int PlaneModelClass::GetIndexCount()
+int CubeModelClass::GetIndexCount()
 {
 	//返回索引顶点计数
 	return m_indexCount;
 }
 
-bool PlaneModelClass::InitializeBuffers(ID3D11Device* device, int m, int n, float dx)
+bool CubeModelClass::InitializeBuffers(ID3D11Device* device)
 {
 	VertexType* vertices;
 	unsigned long* indices;
 	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
+	int i;
 
-	//计算得到顶点和索引顶点数目
-		//首先得到三角形的数目，然后乘以3就是顶点索引数目
-	m_vertexCount = m * n;
-	m_indexCount = (m - 1)*(n - 1) * 2 * 3; 
+	//首先，我们创建2个临时缓冲存放顶点和索引数据，以便后面使用。. 
+
 
 	// 创建顶点临时缓冲.
 	vertices = new VertexType[m_vertexCount];
@@ -80,34 +81,6 @@ bool PlaneModelClass::InitializeBuffers(ID3D11Device* device, int m, int n, floa
 		return false;
 	}
 
-	float halfWidth = (n - 1)*dx*0.5f;
-	float halfDepth = (m - 1)*dx*0.5f;
-
-	for (int i = 0; i < m; ++i)
-	{
-		float z = halfDepth - i * dx;
-		for (int j = 0; j < n; ++j)
-		{
-			float x = -halfWidth + j * dx;
-
-			float y = -3.0;
-
-			vertices[i*n + j].position = XMFLOAT3(x, y, z);
-			vertices[i*n + j].normal = XMFLOAT3(0.0, 1.0f, 0.0);
-			vertices[i*n + j].Kd = XMFLOAT4(0.0, 1.0, 0.0, 1.0);;
-			vertices[i*n + j].Ks = XMFLOAT4(0.2, 0.2, 0.2, 1.0);
-
-			if (i % 2 == 0 && j % 2 == 0)
-				vertices[i*n + j].texture = XMFLOAT2(0.0, 0.0);
-			if (i % 2 == 1 && j % 2 == 0)
-				vertices[i*n + j].texture = XMFLOAT2(1.0, 0.0);
-			if (i % 2 == 0 && j % 2 == 1)
-				vertices[i*n + j].texture = XMFLOAT2(0.0, 1.0);
-			if (i % 2 == 1 && j % 2 == 1)
-				vertices[i*n + j].texture = XMFLOAT2(1.0, 1.0);
-
-		}
-	}
 
 	// 创建索引缓冲.
 	indices = new unsigned long[m_indexCount];
@@ -116,22 +89,16 @@ bool PlaneModelClass::InitializeBuffers(ID3D11Device* device, int m, int n, floa
 		return false;
 	}
 
-	// 迭代每个grid，计算得出索引.
-	int k = 0;
-	for (int i = 0; i < m - 1; ++i)
+	// Load the vertex array and index array with data.
+	for (i = 0; i < m_vertexCount; i++)
 	{
-		for (int j = 0; j < n - 1; ++j)
-		{
-			indices[k] = i * n + j;
-			indices[k + 1] = i * n + j + 1;
-			indices[k + 2] = (i + 1)*n + j;
+		vertices[i].position = XMFLOAT3(m_model[i].x, m_model[i].y, m_model[i].z);
+		vertices[i].normal = XMFLOAT3(m_model[i].nx, m_model[i].ny, m_model[i].nz);
+		vertices[i].texture = XMFLOAT2(m_model[i].tu, m_model[i].tv);
+		vertices[i].Kd = XMFLOAT4(1.0, 1.0, 1.0, 1.0);
+		vertices[i].Ks = XMFLOAT4(0.2, 0.2, 0.2, 1.0);
 
-			indices[k + 3] = (i + 1)*n + j;
-			indices[k + 4] = i * n + j + 1;
-			indices[k + 5] = (i + 1)*n + j + 1;
-
-			k += 6; //下一个grid
-		}
+		indices[i] = i;
 	}
 
 
@@ -187,7 +154,7 @@ bool PlaneModelClass::InitializeBuffers(ID3D11Device* device, int m, int n, floa
 	return true;
 }
 
-void PlaneModelClass::ShutdownBuffers()
+void CubeModelClass::ShutdownBuffers()
 {
 	// 释放顶点缓冲.
 	if (m_indexBuffer)
@@ -206,7 +173,7 @@ void PlaneModelClass::ShutdownBuffers()
 	return;
 }
 
-void PlaneModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
+void CubeModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 {
 	unsigned int stride;
 	unsigned int offset;
@@ -227,42 +194,71 @@ void PlaneModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 
 	return;
 }
-ID3D11ShaderResourceView* PlaneModelClass::GetTexture()
+
+bool CubeModelClass::LoadModel(char* filename)
 {
-	return m_Texture->GetTexture();
-}
+	ifstream fin;
+	char input;
+	int i;
 
 
-bool PlaneModelClass::LoadTexture(ID3D11Device* device, WCHAR* filename)
-{
-	bool result;
+	//打开模型文件.
+	fin.open(filename);
 
-
-	// 创建纹理对象
-	m_Texture = new TextureClass;
-	if (!m_Texture)
+	// 不能打开文件，则退出.
+	if (fin.fail())
 	{
 		return false;
 	}
 
-	//初始化纹理对象.
-	result = m_Texture->Initialize(device, filename);
-	if (!result)
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
+
+	//得到顶点数量.
+	fin >> m_vertexCount;
+
+	// 设置顶点索引和顶点数量一致.
+	m_indexCount = m_vertexCount;
+
+	// 创建模型.
+	m_model = new ModelType[m_vertexCount];
+	if (!m_model)
 	{
 		return false;
 	}
+
+	// 跳到顶点数据开始位置.
+	fin.get(input);
+	while (input != ':')
+	{
+		fin.get(input);
+	}
+	fin.get(input);
+	fin.get(input);
+
+	// 读取顶点数据
+	for (i = 0; i < m_vertexCount; i++)
+	{
+		fin >> m_model[i].x >> m_model[i].y >> m_model[i].z;
+		fin >> m_model[i].tu >> m_model[i].tv;
+		fin >> m_model[i].nx >> m_model[i].ny >> m_model[i].nz;
+	}
+
+	// 关闭模型文件
+	fin.close();
 
 	return true;
 }
 
-void PlaneModelClass::ReleaseTexture()
+void CubeModelClass::ReleaseModel()
 {
-	// 释放纹理对象.
-	if (m_Texture)
+	if (m_model)
 	{
-		m_Texture->Shutdown();
-		delete m_Texture;
-		m_Texture = 0;
+		delete[] m_model;
+		m_model = 0;
 	}
 
 	return;

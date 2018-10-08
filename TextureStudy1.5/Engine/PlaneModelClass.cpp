@@ -5,7 +5,6 @@ PlaneModelClass::PlaneModelClass(void)
 {
 	m_vertexBuffer = 0;
 	m_indexBuffer = 0;
-	m_Texture = 0;
 }
 
 PlaneModelClass::PlaneModelClass(const PlaneModelClass& others)
@@ -17,18 +16,12 @@ PlaneModelClass::~PlaneModelClass(void)
 {
 }
 
-bool PlaneModelClass::Initialize(ID3D11Device* device, int m, int n, float dx, WCHAR* textureFilename)
+bool PlaneModelClass::Initialize(ID3D11Device* device, int m, int n, float dx)
 {
 	bool result;
 
-
 	// 初始化顶点缓冲和顶点索引缓冲.
 	result = InitializeBuffers(device, m, n, dx);
-	if (!result)
-	{
-		return false;
-	}
-	result = LoadTexture(device, textureFilename);
 	if (!result)
 	{
 		return false;
@@ -38,8 +31,6 @@ bool PlaneModelClass::Initialize(ID3D11Device* device, int m, int n, float dx, W
 
 void PlaneModelClass::Shutdown()
 {
-	// 释放纹理
-	ReleaseTexture();
 	// 释放顶点和索引缓冲.
 	ShutdownBuffers();
 
@@ -94,7 +85,7 @@ bool PlaneModelClass::InitializeBuffers(ID3D11Device* device, int m, int n, floa
 
 			vertices[i*n + j].position = XMFLOAT3(x, y, z);
 			vertices[i*n + j].normal = XMFLOAT3(0.0, 1.0f, 0.0);
-			vertices[i*n + j].Kd = XMFLOAT4(0.0, 1.0, 0.0, 1.0);;
+			vertices[i*n + j].Kd = XMFLOAT4(0.0, 0.8, 0.0, 1.0);;
 			vertices[i*n + j].Ks = XMFLOAT4(0.2, 0.2, 0.2, 1.0);
 
 			if (i % 2 == 0 && j % 2 == 0)
@@ -224,46 +215,6 @@ void PlaneModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 
 	// 设置体元语义，渲染三角形列表.
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	return;
-}
-ID3D11ShaderResourceView* PlaneModelClass::GetTexture()
-{
-	return m_Texture->GetTexture();
-}
-
-
-bool PlaneModelClass::LoadTexture(ID3D11Device* device, WCHAR* filename)
-{
-	bool result;
-
-
-	// 创建纹理对象
-	m_Texture = new TextureClass;
-	if (!m_Texture)
-	{
-		return false;
-	}
-
-	//初始化纹理对象.
-	result = m_Texture->Initialize(device, filename);
-	if (!result)
-	{
-		return false;
-	}
-
-	return true;
-}
-
-void PlaneModelClass::ReleaseTexture()
-{
-	// 释放纹理对象.
-	if (m_Texture)
-	{
-		m_Texture->Shutdown();
-		delete m_Texture;
-		m_Texture = 0;
-	}
 
 	return;
 }

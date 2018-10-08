@@ -40,7 +40,7 @@ struct PixelInputType
 	float4 worldposition: POSITION;
 	float3 worldnormal: NORMAL;
 	float2 tex : TEXCOORD0;
-	float4 Kd : DIFFUSE;
+	//float4 Kd : DIFFUSE;
 	float4 Ks: SPECULAR;
 
 };
@@ -69,8 +69,8 @@ float4 LightPixelShader(PixelInputType input) : SV_TARGET
   float4 textureColor = shaderTexture.Sample(SampleType, input.tex);
 
 
-  float4 Kd = input.Kd;
-  //float4 Kd = textureColor;
+  //float4 Kd = input.Kd;
+  float4 Kd = textureColor;
   float4 Ks = input.Ks;
 
   float4 finalcolor = 0;
